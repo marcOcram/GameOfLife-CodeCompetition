@@ -21,19 +21,25 @@ namespace GameOfLife
         public GameOfLife(Rules rules, LifeBoard lifeBoard)
         {
             _rules = rules ?? throw new ArgumentNullException(nameof(rules)); ;
-            _lifeBoard = lifeBoard ?? throw new ArgumentNullException(nameof(lifeBoard)); ;
+            _lifeBoard = lifeBoard ?? throw new ArgumentNullException(nameof(lifeBoard));
 
-            Habitants = _lifeBoard.GetLifeStates();
+            NonHabitablePositions = _lifeBoard.ToPositionDictionary(_lifeBoard.GetLifeStates().Where(l => l == LifeState.NoLifePossible).ToArray()).Keys;
+
+            UpdateHabitablePositions();
         }
 
         #endregion Public Constructors
 
         #region Public Properties
 
+        public IEnumerable<Position> NonHabitablePositions { get; }
+
         public IReadOnlyDictionary<Position, LifeState> Habitants { get; private set; }
 
         public uint Height => _lifeBoard.TotalHeight;
+
         public uint Iteration { get; private set; }
+
         public uint Width => _lifeBoard.TotalWidth;
 
         #endregion Public Properties
@@ -42,26 +48,36 @@ namespace GameOfLife
 
         public void Iterate()
         {
-            ConcurrentDictionary<Position, LifeState> changes = new ConcurrentDictionary<Position, LifeState>();
+            ConcurrentBag<Position> birthPositions = new ConcurrentBag<Position>();
+            ConcurrentBag<Position> deathPositions = new ConcurrentBag<Position>();
 
-            Parallel.ForEach(_lifeBoard.GetLifeStates().Where(h => h.Value != LifeState.NoLifePossible), habitant => {
-                LifeState[] neighbors = _lifeBoard.GetNeighbors(habitant.Key).Values.ToArray();
+            Parallel.ForEach(Habitants.Where(h => h.Value != LifeState.NoLifePossible), new ParallelOptions() { MaxDegreeOfParallelism = 4 }, habitant => {
+                LifeState[] neighbors = _lifeBoard.GetNeighbors(habitant.Key);
                 int nAliveNeighbors = neighbors.Count(n => n == LifeState.Alive);
 
                 if (habitant.Value == LifeState.Dead && _rules.Birth.Contains(nAliveNeighbors)) {
-                    changes.AddOrUpdate(habitant.Key, LifeState.Alive, (key, oldValue) => LifeState.Alive);
+                    birthPositions.Add(habitant.Key);
                 } else if (habitant.Value == LifeState.Alive && !_rules.Alive.Contains(nAliveNeighbors)) {
-                    changes.AddOrUpdate(habitant.Key, LifeState.Dead, (key, oldValue) => LifeState.Dead);
+                    deathPositions.Add(habitant.Key);
                 }
             });
 
-            _lifeBoard.ApplyChanges(changes.Where(c => c.Value == LifeState.Alive).Select(c => c.Key), changes.Where(c => c.Value == LifeState.Dead).Select(c => c.Key));
+            _lifeBoard.ApplyChanges(birthPositions, deathPositions);
 
-            Habitants = _lifeBoard.GetLifeStates();
+            UpdateHabitablePositions();
 
             ++Iteration;
         }
 
         #endregion Public Methods
+
+        #region Private Methods
+
+        private void UpdateHabitablePositions()
+        {
+            Habitants = _lifeBoard.ToPositionDictionary(_lifeBoard.GetLifeStates());
+        }
+
+        #endregion Private Methods
     }
 }
