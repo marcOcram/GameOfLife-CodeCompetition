@@ -1,0 +1,43 @@
+﻿<UserControl x:Class="GameOfLifeWPF.Controls.ColorPicker"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:GameOfLifeWPF.Controls"
+             mc:Ignorable="d">
+    <UserControl.Resources>
+        <ObjectDataProvider x:Key="_colors" ObjectType="{x:Type local:ColorProvider}" />
+    </UserControl.Resources>
+    <Grid>
+        <ToggleButton x:Name="_aliveColorPicker" DockPanel.Dock="Top" Margin="2" Height="25" Width="25" ToolTip="{Binding ElementName=_aliveColor, Path=SelectedItem.Name}">
+            <ToggleButton.Background>
+                <SolidColorBrush Color="{Binding ElementName=_aliveColor, Path=SelectedValue, FallbackValue=Transparent, TargetNullValue=Transparent, Mode=OneWay}" />
+            </ToggleButton.Background>
+            <ToggleButton.Template>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" />
+                </ControlTemplate>
+            </ToggleButton.Template>
+        </ToggleButton>
+        <Popup IsOpen="{Binding IsChecked, ElementName=_aliveColorPicker, Mode=TwoWay}" StaysOpen="False" Placement="Bottom" PlacementTarget="{Binding ElementName=_aliveColorPicker}">
+            <ListView x:Name="_aliveColor" DockPanel.Dock="Top" ItemsSource="{x:Static local:ColorProvider.Colors}" SelectedValuePath="Color" SelectedValue="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=Color}">
+                <ListView.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Columns="10" />
+                    </ItemsPanelTemplate>
+                </ListView.ItemsPanel>
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem">
+                        <Setter Property="Margin" Value="0" />
+                        <Setter Property="Padding" Value="0" />
+                    </Style>
+                </ListView.ItemContainerStyle>
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <Rectangle Width="25" Height="25" Fill="{Binding Name}" ToolTip="{Binding Name}" />
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </Popup>
+    </Grid>
+</UserControl>

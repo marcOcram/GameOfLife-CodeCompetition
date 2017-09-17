@@ -8,7 +8,7 @@ namespace GameOfLife
 {
     public class RectangularLifeBoard : LifeBoard
     {
-        private readonly Position[][] _neighborCache;
+        private readonly Position[,][] _neighborCache;
 
         #region Private Fields
 
@@ -50,36 +50,19 @@ namespace GameOfLife
             if (!(0 <= position.X && position.X < _width)) throw new ArgumentOutOfRangeException(nameof(position), $"Position not inside {nameof(LifeBoard)}!");
             if (!(0 <= position.Y && position.Y < _height)) throw new ArgumentOutOfRangeException(nameof(position), $"Position not inside {nameof(LifeBoard)}!");
 
-            return GetLifeStates(_neighborCache[ToIndex(position)]);
+            return GetLifeStates(_neighborCache[position.X, position.Y]);
         }
-
-        //public override IReadOnlyDictionary<Position, LifeState> GetPositionedNeighbors(Position position)
-        //{
-        //    if (!(0 <= position.X && position.X < _width)) throw new ArgumentOutOfRangeException(nameof(position), $"Position not inside {nameof(LifeBoard)}!");
-        //    if (!(0 <= position.Y && position.Y < _height)) throw new ArgumentOutOfRangeException(nameof(position), $"Position not inside {nameof(LifeBoard)}!");
-
-        //    //if (!_neighborCache.ContainsKey(position)) {
-        //    //    IEnumerable<Position> neighborPositions = RectangleNeighborHelper.GetNeighborPositions(position, TotalWidth, TotalHeight);
-        //    //    _neighborCache.AddOrUpdate(position, neighborPositions, (key, oldValue) => neighborPositions);
-        //    //}
-
-        //    //var neighbors = _neighborCache.GetOrAdd(position, new Lazy<IEnumerable<Position>>(() => RectangleNeighborHelper.GetNeighborPositions(position, TotalWidth, TotalHeight)));
-
-        //    //IEnumerable<Position> neighborPositions = RectangleNeighborHelper.GetNeighborPositions(position, TotalWidth, TotalHeight);
-
-        //    return GetLifeStates2(_arrayCache[position.Y * _width + position.X]);
-        //}
 
         #endregion Public Methods
 
-        private Position[][] CreateNeighborCache()
+        private Position[,][] CreateNeighborCache()
         {
-            Position[][] positions = new Position[_width * _height][];
+            Position[,][] positions = new Position[_width, _height][];
 
             for (uint y = 0; y < _height; ++y) {
                 for (uint x = 0; x < _width; ++x) {
                     Position currentPosition = new Position(x, y);
-                    positions[y * _width + x] = RectangleNeighborHelper.GetNeighborPositions(currentPosition, TotalWidth, TotalHeight).ToArray();
+                    positions[x, y] = RectangleNeighborHelper.GetNeighborPositions(currentPosition, Width, Height).ToArray();
                 }
             }
 

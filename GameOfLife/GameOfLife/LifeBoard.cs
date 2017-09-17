@@ -1,18 +1,17 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 
 namespace GameOfLife
 {
-    public abstract class LifeBoard
+    public abstract class LifeBoard : IReadOnlyLifeBoard
     {
         #region Private Fields
 
         private readonly LifeState[,] _board;
-        private readonly ConcurrentBag<Position> _habitablePositions = new ConcurrentBag<Position>();
+        private readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
 
         #endregion Private Fields
 
@@ -22,31 +21,24 @@ namespace GameOfLife
         {
             _board = board;
 
-            TotalWidth = (uint)_board.GetLength(0);
-
-            TotalHeight = (uint)_board.GetLength(1);
-
-            Parallel.ForEach(Range(0, TotalHeight), y => {
-                for (uint x = 0; x < TotalWidth; ++x) {
-                    if (_board[x, y] != LifeState.NoLifePossible) {
-                        _habitablePositions.Add(new Position(x, y));
-                    }
-                }
-            });
+            Width = (uint)_board.GetLength(0);
+            Height = (uint)_board.GetLength(1);
         }
 
         #endregion Protected Constructors
 
         #region Public Properties
 
-        public uint TotalHeight { get; }
-        public uint TotalWidth { get; }
+        public uint Height { get; }
+        public uint Width { get; }
 
         #endregion Public Properties
 
         #region Public Indexers
 
-        public LifeState this[Position position] => GetLifeState(position);
+        public LifeState this[Position position] => this[position.X, position.Y];
+
+        public LifeState this[uint x, uint y] => GetLifeState(x, y);
 
         #endregion Public Indexers
 
@@ -54,32 +46,19 @@ namespace GameOfLife
 
         public void ApplyChanges(IEnumerable<Position> alivePositions, IEnumerable<Position> deadPositions)
         {
-            var t = alivePositions.ToDictionary(p => p, p => LifeState.Alive).Union(deadPositions.ToDictionary(p => p, p => LifeState.Dead));
+            _lock.EnterWriteLock();
+            try {
+                foreach (Position position in alivePositions) {
+                    _board[position.X, position.Y] = LifeState.Alive;
+                }
 
-            Parallel.ForEach(t, c => _board[c.Key.X, c.Key.Y] = c.Value);
+                foreach (Position position in deadPositions) {
+                    _board[position.X, position.Y] = LifeState.Dead;
+                }
+            } finally {
+                _lock.ExitWriteLock();
+            }
         }
-
-        ///// <summary>
-        ///// Gets the habitable life states.
-        ///// The position can be calculated via the index or by utilizing <see cref="ToPositionDictionary{T}(T[])"/>
-        ///// <para>
-        ///// uint x = (uint)index % <see cref="TotalWidth" />
-        ///// </para>
-        ///// <para>
-        ///// uint y = (uint)index / <see cref="TotalHeight" />
-        ///// </para>
-        ///// </summary>
-        ///// <returns></returns>
-        //public LifeState[] GetHabitableLifeStates()
-        //{
-        //    LifeState[] lifeStates = new LifeState[_habitablePositions.Count];
-
-        //    Parallel.ForEach(_habitablePositions, habitablePosition => {
-        //        lifeStates[habitablePosition.Y * TotalWidth + habitablePosition.X] = _board[habitablePosition.X, habitablePosition.Y];
-        //    });
-
-        //    return lifeStates;
-        //}
 
         /// <summary>
         /// Gets the state of life for a position.
@@ -91,27 +70,20 @@ namespace GameOfLife
         /// </exception>
         public LifeState GetLifeState(Position position)
         {
-            if (!(0 <= position.X && position.X < TotalWidth)) throw new ArgumentOutOfRangeException(nameof(position), $"Position not inside {nameof(LifeBoard)}!");
-            if (!(0 <= position.Y && position.Y < TotalHeight)) throw new ArgumentOutOfRangeException(nameof(position), $"Position not inside {nameof(LifeBoard)}!");
-
-            return _board[position.X, position.Y];
+            return GetLifeState(position.X, position.Y);
         }
 
-        /// <summary>
-        /// Gets the life states including non habitable positions.
-        /// </summary>
-        /// <returns></returns>
-        public LifeState[] GetLifeStates()
+        public LifeState GetLifeState(uint x, uint y)
         {
-            LifeState[] lifeStates = new LifeState[TotalWidth * TotalHeight];
+            if (!(0 <= x && x < Width)) throw new ArgumentOutOfRangeException(nameof(x), $"Not inside {nameof(LifeBoard)}!");
+            if (!(0 <= y && y < Height)) throw new ArgumentOutOfRangeException(nameof(y), $"Not inside {nameof(LifeBoard)}!");
 
-            Parallel.ForEach(Range(0, TotalHeight), y => {
-                for (uint x = 0; x < TotalWidth; ++x) {
-                    lifeStates[y * TotalWidth + x] = _board[x, y];
-                }
-            });
-
-            return lifeStates;
+            _lock.EnterReadLock();
+            try {
+                return _board[x, y];
+            } finally {
+                _lock.ExitReadLock();
+            }
         }
 
         /// <summary>
@@ -126,9 +98,14 @@ namespace GameOfLife
         {
             LifeState[] lifeStates = new LifeState[positions.Count];
 
-            Parallel.For(0, positions.Count, index => {
-                lifeStates[index] = GetLifeState(positions[index]);
-            });
+            _lock.EnterReadLock();
+            try {
+                for (int index = 0; index < positions.Count; ++index) {
+                    lifeStates[index] = GetLifeState(positions[index]);
+                }
+            } finally {
+                _lock.ExitReadLock();
+            }
 
             return lifeStates;
         }
@@ -140,48 +117,40 @@ namespace GameOfLife
         /// <returns></returns>
         public abstract LifeState[] GetNeighbors(Position position);
 
-        /// <summary>
-        /// Converts a position to an index.
-        /// </summary>
-        /// <param name="position">The position.</param>
-        /// <returns></returns>
-        public uint ToIndex(Position position)
+        public void SetAlive(Position position)
         {
-            return position.Y * TotalWidth + position.X;
+            SetAlive(position.X, position.Y);
         }
 
-        /// <summary>
-        /// Converts an index to position.
-        /// </summary>
-        /// <param name="index">The index.</param>
-        /// <returns></returns>
-        public Position ToPosition(uint index)
+        public void SetAlive(uint x, uint y)
         {
-            return new Position(index % TotalWidth, index / TotalWidth);
+            SetLifeState(x, y, LifeState.Alive);
         }
 
-        /// <summary>
-        /// Converts an enumeration to an <see cref="IReadOnlyDictionary{Position, T}"/> where the index is used for calculating the position.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="values">The values.</param>
-        /// <returns></returns>
-        public IReadOnlyDictionary<Position, T> ToPositionDictionary<T>(IEnumerable<T> values)
+        public void SetDead(Position position)
         {
-            return values.Select((value, index) => new { index, value }).ToDictionary(i => ToPosition((uint)i.index), i => i.value);
+            SetDead(position.X, position.Y);
+        }
+
+        public void SetDead(uint x, uint y)
+        {
+            SetLifeState(x, y, LifeState.Dead);
         }
 
         #endregion Public Methods
 
-        #region Protected Methods
+        #region Private Methods
 
-        protected static IEnumerable<uint> Range(uint fromInclusive, uint toExclusive)
+        private void SetLifeState(uint x, uint y, LifeState lifeState)
         {
-            for (uint i = fromInclusive; i < toExclusive; ++i) {
-                yield return i;
+            _lock.EnterWriteLock();
+            try {
+                _board[x, y] = lifeState;
+            } finally {
+                _lock.ExitWriteLock();
             }
         }
 
-        #endregion Protected Methods
+        #endregion Private Methods
     }
 }

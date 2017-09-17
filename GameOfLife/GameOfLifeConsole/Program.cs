@@ -9,36 +9,21 @@ namespace GameOfLifeConsole
 {
     class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             LifeBoard lifeBoard = GetLifeBoard();
 
             Rules rules = GetRules();
-
-            //var rules = new Rules();
-            //var lifeBoard = RectangularLifeBoard.Create(50, 25, new List<Position>() {
-            //    new Position(1, 0),
-            //    new Position(2, 1),
-            //    new Position(0, 2),
-            //    new Position(1, 2),
-            //    new Position(2, 2)
-            //});
-            //var lifeBoard = CuboidLifeBoard.Create(3, 4, 5, new List<Position>() {
-            //    new Position(5, 0),
-            //    new Position(0, 5),
-            //    new Position(0, 6),
-            //    new Position(7, 0),
-            //    new Position(12, 5),
-            //    new Position(12, 6)
-            //});
-            var gameOfLife = new GameOfLife.GameOfLife(rules, lifeBoard);
+            
+            var gameOfLife = new GameOfLife.GameController(rules, lifeBoard);
 
             uint iterations = 1;
+            DisplayGameOfLife(gameOfLife);
             while (true) {
-                DisplayGameOfLife(gameOfLife);
                 iterations = GetUInt32($"Iterations [{iterations}]: ", iterations);
                 for (int i = 0; i < iterations; ++i) {
-                    gameOfLife.Iterate();
+                    await gameOfLife.IterateAsync().ConfigureAwait(false);
+                    DisplayGameOfLife(gameOfLife);
                 }
             }
         }
@@ -170,21 +155,21 @@ namespace GameOfLifeConsole
             return positions;
         }
 
-        private static void DisplayGameOfLife(GameOfLife.GameOfLife gameOfLife)
+        private static void DisplayGameOfLife(GameOfLife.GameController gameOfLife)
         {
             Console.Clear();
 
             Console.WriteLine("Iteration " + gameOfLife.Iteration);
 
-            DisplayHabitants(gameOfLife.Habitants, gameOfLife.Width, gameOfLife.Height);
+            DisplayHabitants(gameOfLife.LifeBoard);
         }
 
-        private static void DisplayHabitants(IEnumerable<KeyValuePair<Position, LifeState>> habitants, uint width, uint height)
+        private static void DisplayHabitants(IReadOnlyLifeBoard lifeBoard)
         {
-            for (int i = 0; i < width; ++i) {
+            for (int i = 0; i < lifeBoard.Width; ++i) {
                 if (i == 0) {
                     Console.Write("┌───");
-                } else if (i == (width - 1)) {
+                } else if (i == (lifeBoard.Width - 1)) {
                     Console.Write("───┐");
                 } else {
                     Console.Write("──");
@@ -193,44 +178,42 @@ namespace GameOfLifeConsole
 
             Console.WriteLine();
 
-            var orderedHabitants = habitants.OrderBy(h => h.Key.Y).ThenBy(h => h.Key.X);
+            for (uint y = 0; y < lifeBoard.Height; ++y) {
 
-            foreach (var habitant in orderedHabitants) {
-                if (habitant.Key.X == 0) {
-                    Console.Write("│ ");
-                }
+                Console.Write("│ ");
 
                 ConsoleColor oldBackgroundColor = Console.BackgroundColor;
                 ConsoleColor oldForegroundColor = Console.ForegroundColor;
 
-                Console.BackgroundColor = ConsoleColor.Gray;
-                Console.ForegroundColor = ConsoleColor.Black;
-                switch (habitant.Value) {
-                    case LifeState.NoLifePossible:
-                        Console.BackgroundColor = ConsoleColor.DarkGray;
-                        Console.Write("  ");
-                        break;
-                    case LifeState.Dead:
-                        Console.Write("  ");
-                        break;
-                    case LifeState.Alive:
-                        Console.Write("██");
-                        break;
+                for (uint x = 0; x < lifeBoard.Width; ++x) {
+                    Console.BackgroundColor = ConsoleColor.Gray;
+                    Console.ForegroundColor = ConsoleColor.Black;
+
+                    switch (lifeBoard[new Position(x, y)]) {
+                        case LifeState.NoLifePossible:
+                            Console.BackgroundColor = ConsoleColor.DarkGray;
+                            Console.Write("  ");
+                            break;
+                        case LifeState.Dead:
+                            Console.Write("  ");
+                            break;
+                        case LifeState.Alive:
+                            Console.Write("██");
+                            break;
+                    }
                 }
 
                 Console.BackgroundColor = oldBackgroundColor;
                 Console.ForegroundColor = oldForegroundColor;
 
-                if (habitant.Key.X == (width - 1)) {
-                    Console.Write(" │");
-                    Console.WriteLine();
-                }
+                Console.Write(" │");
+                Console.WriteLine();
             }
 
-            for (int i = 0; i < width; ++i) {
+            for (int i = 0; i < lifeBoard.Width; ++i) {
                 if (i == 0) {
                     Console.Write("└───");
-                } else if (i == (width - 1)) {
+                } else if (i == (lifeBoard.Width - 1)) {
                     Console.Write("───┘");
                 } else {
                     Console.Write("──");

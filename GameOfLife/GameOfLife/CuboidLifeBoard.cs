@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,10 +12,10 @@ namespace GameOfLife
     {
         #region Private Fields
 
-        private readonly uint _depth;
-        private readonly uint _height;
-        private readonly Position[][] _neighborCache;
-        private readonly uint _width;
+        private readonly uint _cuboidDepth;
+        private readonly uint _cuboidHeight;
+        private readonly Position[,][] _neighborCache;
+        private readonly uint _cuboidWidth;
 
         #endregion Private Fields
 
@@ -23,9 +24,9 @@ namespace GameOfLife
         private CuboidLifeBoard(uint width, uint height, uint depth, LifeState[,] lifeBoard) :
             base(lifeBoard)
         {
-            _width = width;
-            _height = height;
-            _depth = depth;
+            _cuboidWidth = width;
+            _cuboidHeight = height;
+            _cuboidDepth = depth;
 
             _neighborCache = CreateNeighborCache();
         }
@@ -63,9 +64,9 @@ namespace GameOfLife
 
         public override LifeState[] GetNeighbors(Position position)
         {
-            if (!IsLifePossible(position.X, position.Y, _width, _height, _depth)) throw new ArgumentOutOfRangeException(nameof(position), "Life is for position impossible");
+            if (!IsLifePossible(position.X, position.Y, _cuboidWidth, _cuboidHeight, _cuboidDepth)) throw new ArgumentOutOfRangeException(nameof(position), "Life is for position impossible");
 
-            return GetLifeStates(_neighborCache[ToIndex(position)]);
+            return GetLifeStates(_neighborCache[position.X, position.Y]);
         }
 
         #endregion Public Methods
@@ -133,95 +134,97 @@ namespace GameOfLife
              */
 
             ConcurrentBag<Tuple<Position, Position>> edgeMappings = new ConcurrentBag<Tuple<Position, Position>>();
-
-            Parallel.ForEach(Range(0, _depth), i => {
+            
+            for (uint i = 0; i < _cuboidDepth; ++i) { 
                 // 1
-                Position firstEdgePosition = new Position(_depth, i + 1);
-                edgeMappings.Add(Tuple.Create(firstEdgePosition, new Position(i + 1, _depth + 1)));
+                Position firstEdgePosition = new Position(_cuboidDepth, i + 1);
+                edgeMappings.Add(Tuple.Create(firstEdgePosition, new Position(i + 1, _cuboidDepth + 1)));
                 // 2
-                Position secondEdgePosition = new Position(_depth + _width + 1, i + 1);
-                edgeMappings.Add(Tuple.Create(secondEdgePosition, new Position(2 * _depth + _width - i, _depth + 1)));
+                Position secondEdgePosition = new Position(_cuboidDepth + _cuboidWidth + 1, i + 1);
+                edgeMappings.Add(Tuple.Create(secondEdgePosition, new Position(2 * _cuboidDepth + _cuboidWidth - i, _cuboidDepth + 1)));
                 // 3
-                Position thirdEdgePosition = new Position(_depth, _depth + _height + i + 1);
-                edgeMappings.Add(Tuple.Create(thirdEdgePosition, new Position(_depth - i, _depth + _height)));
+                Position thirdEdgePosition = new Position(_cuboidDepth, _cuboidDepth + _cuboidHeight + i + 1);
+                edgeMappings.Add(Tuple.Create(thirdEdgePosition, new Position(_cuboidDepth - i, _cuboidDepth + _cuboidHeight)));
                 // 4
-                Position fourthEdgePosition = new Position(_depth + _width + 1, _depth + _height + i + 1);
-                edgeMappings.Add(Tuple.Create(fourthEdgePosition, new Position(_depth + _width + i + 1, _depth + _width)));
+                Position fourthEdgePosition = new Position(_cuboidDepth + _cuboidWidth + 1, _cuboidDepth + _cuboidHeight + i + 1);
+                edgeMappings.Add(Tuple.Create(fourthEdgePosition, new Position(_cuboidDepth + _cuboidWidth + 1 + i, _cuboidDepth + _cuboidHeight)));
                 // 5
-                Position fifthEdgePosition = new Position(i + 1, _depth);
-                edgeMappings.Add(Tuple.Create(fifthEdgePosition, new Position(_depth + 1, i + 1)));
+                Position fifthEdgePosition = new Position(i + 1, _cuboidDepth);
+                edgeMappings.Add(Tuple.Create(fifthEdgePosition, new Position(_cuboidDepth + 1, i + 1)));
                 // 6
-                Position sixthEdgePosition = new Position(_depth + _width + i + 1, _depth);
-                edgeMappings.Add(Tuple.Create(sixthEdgePosition, new Position(_depth + _width, _depth - i)));
+                Position sixthEdgePosition = new Position(_cuboidDepth + _cuboidWidth + i + 1, _cuboidDepth);
+                edgeMappings.Add(Tuple.Create(sixthEdgePosition, new Position(_cuboidDepth + _cuboidWidth, _cuboidDepth - i)));
                 // 7
-                Position seventhEdgePosition = new Position(i + 1, _depth + _height + 1);
-                edgeMappings.Add(Tuple.Create(seventhEdgePosition, new Position(_depth + 1, 2 * _depth + _height - i)));
+                Position seventhEdgePosition = new Position(i + 1, _cuboidDepth + _cuboidHeight + 1);
+                edgeMappings.Add(Tuple.Create(seventhEdgePosition, new Position(_cuboidDepth + 1, 2 * _cuboidDepth + _cuboidHeight - i)));
                 // 8
-                Position eigthEdgePosition = new Position(_depth + _width + i + 1, _depth + _height + 1);
-                edgeMappings.Add(Tuple.Create(eigthEdgePosition, new Position(_depth + _width, _depth + _height + i + 1)));
-            });
+                Position eigthEdgePosition = new Position(_cuboidDepth + _cuboidWidth + 1 + i, _cuboidDepth + _cuboidHeight + 1);
+                edgeMappings.Add(Tuple.Create(eigthEdgePosition, new Position(_cuboidDepth + _cuboidWidth, _cuboidDepth + _cuboidHeight + 1 + i)));
+            }
 
-            Parallel.ForEach(Range(0, _width), i => {
+            for (uint i = 0; i < _cuboidWidth; ++i) {
                 // 9
-                Position ninthEdgePosition = new Position(2 * _depth + _width + i + 1, _depth);
-                edgeMappings.Add(Tuple.Create(ninthEdgePosition, new Position(_depth + _width - i, 1)));
+                Position ninthEdgePosition = new Position(2 * _cuboidDepth + _cuboidWidth + i + 1, _cuboidDepth);
+                edgeMappings.Add(Tuple.Create(ninthEdgePosition, new Position(_cuboidDepth + _cuboidWidth - i, 1)));
                 // A
-                Position tenthEdgePosition = new Position(2 * _depth + _width + i + 1, _depth + _height + 1);
-                edgeMappings.Add(Tuple.Create(tenthEdgePosition, new Position(_depth + _width - i, 2 * _depth + _height)));
+                Position tenthEdgePosition = new Position(2 * _cuboidDepth + _cuboidWidth + i + 1, _cuboidDepth + _cuboidHeight + 1);
+                edgeMappings.Add(Tuple.Create(tenthEdgePosition, new Position(_cuboidDepth + _cuboidWidth - i, 2 * _cuboidDepth + _cuboidHeight)));
                 // B
-                Position eleventhEdgePosition = new Position(_depth + i + 1, 0);
-                edgeMappings.Add(Tuple.Create(eleventhEdgePosition, new Position(2 * _depth + 2 * _width - i, _depth + 1)));
+                Position eleventhEdgePosition = new Position(_cuboidDepth + i + 1, 0);
+                edgeMappings.Add(Tuple.Create(eleventhEdgePosition, new Position(2 * _cuboidDepth + 2 * _cuboidWidth - i, _cuboidDepth + 1)));
                 // C
-                Position twelthEdgePosition = new Position(_depth + i + 1, 2 * _depth + _height + 1);
-                edgeMappings.Add(Tuple.Create(twelthEdgePosition, new Position(2 * _depth + 2 * _width - i, _depth + _height)));
-            });
+                Position twelthEdgePosition = new Position(_cuboidDepth + i + 1, 2 * _cuboidDepth + _cuboidHeight + 1);
+                edgeMappings.Add(Tuple.Create(twelthEdgePosition, new Position(2 * _cuboidDepth + 2 * _cuboidWidth - i, _cuboidDepth + _cuboidHeight)));
+            }
 
-            Parallel.ForEach(Range(0, _height), i => {
+            for (uint i = 0; i < _cuboidHeight; ++i) {
                 // D
-                Position thirteenthEdgePosition = new Position(0, _depth + i + 1);
-                edgeMappings.Add(Tuple.Create(thirteenthEdgePosition, new Position(2 * _depth + 2 * _width, _depth + i + 1)));
+                Position thirteenthEdgePosition = new Position(0, _cuboidDepth + i + 1);
+                edgeMappings.Add(Tuple.Create(thirteenthEdgePosition, new Position(2 * _cuboidDepth + 2 * _cuboidWidth, _cuboidDepth + i + 1)));
                 // E
-                Position fourteenthEdgePosition = new Position(2 * _depth + 2 * _width + 1, _depth + i + 1);
-                edgeMappings.Add(Tuple.Create(fourteenthEdgePosition, new Position(1, _depth + i + 1)));
-            });
+                Position fourteenthEdgePosition = new Position(2 * _cuboidDepth + 2 * _cuboidWidth + 1, _cuboidDepth + i + 1);
+                edgeMappings.Add(Tuple.Create(fourteenthEdgePosition, new Position(1, _cuboidDepth + i + 1)));
+            }
 
             return edgeMappings.ToLookup(g => g.Item1, g => g.Item2);
         }
 
-        private Position[][] CreateNeighborCache()
+        private Position[,][] CreateNeighborCache()
         {
             var edgeMapping = CreateEdgeMapping();
 
-            Position[][] positions = new Position[TotalWidth * TotalHeight][]; // TODO: Don't waste space! new Position[2 * (_width * _depth + _width * _height + _height * _depth)][];
+            Position[,][] positions = new Position[Width, Height][]; // TODO: Don't waste space! new Position[2 * (_width * _depth + _width * _height + _height * _depth)][];
 
-            Parallel.ForEach(Range(0, TotalHeight), y => {
-                for (uint x = 0; x < TotalWidth; ++x) {
+            for (uint y = 0; y < Height; ++y) {
+                for (uint x = 0; x < Width; ++x) {
                     if (IsLifePossible(x, y)) {
                         // by adding a height of two and and moving the Y position one to the bottom, we can simulate an empty row above and below the cuboid field.
                         // by adding a width of two and and moving the X position one to the right, we can simulate an empty column to the left and right of the cuboid field.
                         Position virtualPosition = new Position(x + 1, y + 1);
-                        IEnumerable<Position> virtualNeighborPositions = RectangleNeighborHelper.GetNeighborPositions(virtualPosition, TotalWidth + 2, TotalHeight + 2);
+                        IEnumerable<Position> virtualNeighborPositions = RectangleNeighborHelper.GetNeighborPositions(virtualPosition, Width + 2, Height + 2);
 
                         List<Position> realNeighborPositions = new List<Position>();
                         foreach (var virtualNeighborPosition in virtualNeighborPositions) {
-                            if (edgeMapping.Contains(virtualNeighborPosition)) {
-                                realNeighborPositions.AddRange(edgeMapping[virtualNeighborPosition].Select(vp => new Position(vp.X - 1, vp.Y - 1)));
-                            } else if (virtualNeighborPosition.X != 0 && virtualNeighborPosition.X != (2 * _depth + 2 * _width) + 1 && virtualNeighborPosition.Y != 0 && virtualNeighborPosition.Y != (2 * _depth + _height) + 1) {
-                                realNeighborPositions.Add(new Position(virtualNeighborPosition.X - 1, virtualNeighborPosition.Y - 1));
-                            }
+                            //if (virtualNeighborPosition != virtualPosition) {
+                                if (edgeMapping.Contains(virtualNeighborPosition)) {
+                                    realNeighborPositions.AddRange(edgeMapping[virtualNeighborPosition].Where(p => p != virtualPosition).Select(vp => new Position(vp.X - 1, vp.Y - 1)));
+                                } else if (virtualNeighborPosition.X != 0 && virtualNeighborPosition.X != (2 * _cuboidDepth + 2 * _cuboidWidth) + 1 && virtualNeighborPosition.Y != 0 && virtualNeighborPosition.Y != (2 * _cuboidDepth + _cuboidHeight) + 1) {
+                                    realNeighborPositions.Add(new Position(virtualNeighborPosition.X - 1, virtualNeighborPosition.Y - 1));
+                                }
+                            //}
                         }
 
-                        positions[y * TotalWidth + x] = realNeighborPositions.ToArray();
+                        positions[x, y] = realNeighborPositions.Distinct().ToArray();
                     }
                 }
-            });
+            }
 
             return positions;
         }
 
         private bool IsLifePossible(uint x, uint y)
         {
-            return IsLifePossible(x, y, _width, _height, _depth);
+            return IsLifePossible(x, y, _cuboidWidth, _cuboidHeight, _cuboidDepth);
         }
 
         #endregion Private Methods

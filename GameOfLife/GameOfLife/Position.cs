@@ -28,6 +28,16 @@ namespace GameOfLife
 
         #region Public Methods
 
+        public static bool operator !=(Position p1, Position p2)
+        {
+            return !p1.Equals(p2);
+        }
+
+        public static bool operator ==(Position p1, Position p2)
+        {
+            return p1.Equals(p2);
+        }
+
         public override string ToString()
         {
             return $"({X}, {Y})";
