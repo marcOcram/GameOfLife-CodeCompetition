@@ -14,15 +14,14 @@ In order to run the Game of Life on the console start up the *GameOfLifeConsole.
 
 The console version supports the following parameters:
 
-| Parameter | Value |
-| - | - |
-| -b | "Toroid" or "Cuboid" (Default: "Toroid") |
-| -w | The width of the toroid or cuboid (Default: 10) |
-| -h | The height of the torid or cuboid (Default: 10) |
-| -d | The depth of the cuboid (Default: 10) |
-| -r | The rules (Default: 23/3) |
-| -a | List of initial alive positions. First value is x, then y, then x, then y, ... |
-| -l | Path to a saved game (can only be used without any other parameter) |
+| Parameter	| Value |
+| -b		| "Toroid" or "Cuboid" (Default: "Toroid") |
+| -w 		| The width of the toroid or cuboid (Default: 10) |
+| -h 		| The height of the torid or cuboid (Default: 10) |
+| -d 		| The depth of the cuboid (Default: 10) |
+| -r 		| The rules (Default: 23/3) |
+| -a 		| List of initial alive positions. First value is x, then y, then x, then y, ... |
+| -l 		| Path to a saved game (can only be used without any other parameter) |
     
 #### Examples
 
@@ -46,10 +45,9 @@ In order to run the Game of Life as desktop application you have to start the *G
 
 The following software is used:
 
-| Library | License |
-| - | - |
-| [NETStandard.Library](https://github.com/dotnet/standard) | [MIT License](https://github.com/dotnet/standard/blob/master/LICENSE.TXT) |
-| [System.Runtime.Serialization.Primitives](https://www.microsoft.com/net) | [MICROSOFT SOFTWARE LICENSE](https://www.microsoft.com/net/dotnet_library_license.htm)
-| [CommandLineParser](https://github.com/gsscoder/commandline) | [MIT License](https://github.com/gsscoder/commandline/blob/master/License.md) |
-| [Extended WPF Toolkit](https://github.com/xceedsoftware/wpftoolkit) | [Microsoft Public License](https://github.com/xceedsoftware/wpftoolkit/blob/master/license.md) | 
-| [WriteableBitmapEx](https://github.com/teichgraf/WriteableBitmapEx) | [MIT License](https://github.com/teichgraf/WriteableBitmapEx/blob/master/LICENSE) |
+| Library 																	| License |
+| [NETStandard.Library](https://github.com/dotnet/standard) 				| [MIT License](https://github.com/dotnet/standard/blob/master/LICENSE.TXT) |
+| [System.Runtime.Serialization.Primitives](https://www.microsoft.com/net) 	| [MICROSOFT SOFTWARE LICENSE](https://www.microsoft.com/net/dotnet_library_license.htm)
+| [CommandLineParser](https://github.com/gsscoder/commandline) 				| [MIT License](https://github.com/gsscoder/commandline/blob/master/License.md) |
+| [Extended WPF Toolkit](https://github.com/xceedsoftware/wpftoolkit) 		| [Microsoft Public License](https://github.com/xceedsoftware/wpftoolkit/blob/master/license.md) | 
+| [WriteableBitmapEx](https://github.com/teichgraf/WriteableBitmapEx) 		| [MIT License](https://github.com/teichgraf/WriteableBitmapEx/blob/master/LICENSE) |
