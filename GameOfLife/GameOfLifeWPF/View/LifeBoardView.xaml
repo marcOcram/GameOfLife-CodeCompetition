@@ -8,33 +8,19 @@
              xmlns:root="clr-namespace:GameOfLifeWPF"
              xmlns:vm="clr-namespace:GameOfLifeWPF.ViewModel"
              xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+             xmlns:in="http://schemas.microsoft.com/expression/2010/interactions"
              mc:Ignorable="d" 
-             d:DesignHeight="600" d:DesignWidth="600">
-    <UserControl.DataContext>
-        <vm:GameOfLifeViewModel />
-    </UserControl.DataContext>
+             d:DesignHeight="600" d:DesignWidth="1200">
     <UserControl.Resources>
         <root:ProductConverter x:Key="_productConverter" />
         <root:InverseBooleanConverter x:Key="_inverseBooleanConverter" />
         <BooleanToVisibilityConverter x:Key="_booleanVisibilityConverter" />
 
-        <ObjectDataProvider x:Key="_colors" ObjectInstance="{x:Type Colors}" MethodName="GetProperties" />
-
-        <Style TargetType="ComboBox">
-            <Setter Property="DisplayMemberPath" Value="Name" />
-            <Setter Property="SelectedValuePath" Value="Name" />
-            <Setter Property="Foreground" Value="{Binding Path=SelectedValue, RelativeSource={RelativeSource Self}}" />
-            <Setter Property="ItemTemplate">
-                <Setter.Value>
-                    <DataTemplate>
-                        <TextBlock Background="{Binding Name}" Foreground="Black" Text="{Binding Name}" />
-                    </DataTemplate>
-                </Setter.Value>
-            </Setter>
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="5" />
         </Style>
     </UserControl.Resources>
     <DockPanel>
-        <!--<TextBlock DockPanel.Dock="Top" Text="Performance Issue!" Visibility="{Binding PerformanceIssue, Converter={StaticResource _booleanVisibilityConverter}}" />-->
         <DockPanel DockPanel.Dock="Bottom" Margin="5">
             <TextBlock DockPanel.Dock="Left" VerticalAlignment="Center" Margin="0,0,5,0">
                 <Run Text="Current Iteration:" />
@@ -49,15 +35,21 @@
                     <ToolTip Content="{Binding Path=PlacementTarget.Value, RelativeSource={RelativeSource Self}}" ContentStringFormat="{}{0} ms"  />
                 </Slider.ToolTip>
             </Slider>
+            <TextBlock DockPanel.Dock="Left" VerticalAlignment="Center" Margin="0,0,5,0">
+                <Run Text="Rules" />
+                <Run Text="{Binding CurrentRuleDescription, StringFormat='[{0}]:', Mode=OneWay}" FontWeight="Bold" />
+            </TextBlock>
+            <TextBox Text="{Binding NewRuleDescription}" Width="100" VerticalContentAlignment="Center" Margin="0,0,5,0" />
+            <Button DockPanel.Dock="Left" Content="Change" Command="{Binding ChangeRuleCommand}" Margin="0,0,5,0" />
             <TextBlock DockPanel.Dock="Left" Text="Iterations: " VerticalAlignment="Center" />
-            <Button DockPanel.Dock="Right" Content="Iterate" Command="{Binding IterateCommand}" />
+            <Button DockPanel.Dock="Right" Content="Iterate" Command="{Binding IterateCommand}" Visibility="{Binding RelativeSource={RelativeSource Self}, Path=IsEnabled, Converter={StaticResource _booleanVisibilityConverter}}" />
+            <Button DockPanel.Dock="Right" Content="Cancel" Command="{Binding CancelIterateCommand}" Visibility="{Binding RelativeSource={RelativeSource Self}, Path=IsEnabled, Converter={StaticResource _booleanVisibilityConverter}}" />
             <TextBox VerticalContentAlignment="Center" Text="{Binding Iterations, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="{Binding IsIterating}" Margin="0,0,5,0">
                 <TextBox.InputBindings>
                     <KeyBinding Key="Return" Command="{Binding IterateCommand}" />
                 </TextBox.InputBindings>
             </TextBox>
         </DockPanel>
-        <Slider x:Name="_fieldSize" DockPanel.Dock="Top" Minimum="1" Maximum="100" Delay="1000" Value="25" LargeChange="10" SmallChange="5" />
         <Grid DockPanel.Dock="Right">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="auto" />
@@ -81,8 +73,30 @@
             <controls:ColorPicker Grid.Row="1" Grid.Column="1" x:Name="_deadColor" Color="{root:SettingsBinding Path=Dead}" />
             <TextBlock Grid.Row="2" Grid.Column="0" Text="Border:" />
             <controls:ColorPicker Grid.Row="2" Grid.Column="1" x:Name="_borderColor" Color="{root:SettingsBinding Path=Border}" />
+            <DockPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2">
+                <TextBlock DockPanel.Dock="Top" Text="Zoom" HorizontalAlignment="Center" />
+                <Button DockPanel.Dock="Bottom" Content="Reset" HorizontalAlignment="Center">
+                    <i:Interaction.Triggers>
+                        <i:EventTrigger EventName="Click">
+                            <in:ChangePropertyAction PropertyName="Value" Value="25" TargetName="_fieldSize" />
+                        </i:EventTrigger>
+                    </i:Interaction.Triggers>
+                </Button>
+                <Slider x:Name="_fieldSize" RenderTransformOrigin="0.5,0.5" DockPanel.Dock="Top" Minimum="5" Maximum="25" Value="{Binding ElementName=_lifeBoard, Path=FieldSize, Delay=100, Mode=OneWayToSource, FallbackValue=25}" LargeChange="5" SmallChange="5" TickFrequency="5" TickPlacement="BottomRight"  HorizontalAlignment="Center">
+                    <Slider.LayoutTransform>
+                        <RotateTransform Angle="270" />
+                    </Slider.LayoutTransform>
+                </Slider>
+            </DockPanel>
         </Grid>
         <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <controls:LifeBoard x:Name="_lifeBoard" DockPanel.Dock="Bottom" SnapsToDevicePixels="True" Fields="{Binding Fields}"
+                                AliveColor="{Binding ElementName=_aliveColor, Path=Color}"
+                                DeadColor="{Binding ElementName=_deadColor, Path=Color}"
+                                Stroke="{Binding ElementName=_borderColor, Path=Color}"
+                                />
+        </ScrollViewer>
+        <!--<ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
             <ItemsControl ItemsSource="{Binding Fields}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -134,7 +148,7 @@
                                 <Style TargetType="Rectangle">
                                     <Setter Property="Stroke">
                                         <Setter.Value>
-                                            <SolidColorBrush Color="{Binding ElementName=_borderColor, Path=Color, Mode=OneWay, FallbackValue=Transparent}" />
+                                            <SolidColorBrush x:Name="Test" Color="{Binding ElementName=_borderColor, Path=Color, Mode=OneWay}" />
                                         </Setter.Value>
                                     </Setter>
                                     <Setter Property="StrokeThickness">
@@ -173,7 +187,7 @@
                                 </Style>
                             </Rectangle.Style>
                             <i:Interaction.Triggers>
-                                <i:EventTrigger EventName="MouseLeftButtonUp">
+                                <i:EventTrigger EventName="MouseLeftButtonDown">
                                     <i:InvokeCommandAction Command="{Binding RequestLifeStateChangeCommand}" />
                                 </i:EventTrigger>
                             </i:Interaction.Triggers>
@@ -181,6 +195,6 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
-        </ScrollViewer>
+        </ScrollViewer>-->
     </DockPanel>
 </UserControl>

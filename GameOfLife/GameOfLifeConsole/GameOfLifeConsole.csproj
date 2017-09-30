@@ -32,6 +32,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <LangVersion>latest</LangVersion>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="CommandLine, Version=1.9.71.2, Culture=neutral, PublicKeyToken=de6f01bd326f8c32, processorArchitecture=MSIL">
@@ -43,7 +44,6 @@
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
-    <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
@@ -52,6 +52,42 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\Examples\Cuboid_HWSS.cgol">
+      <Link>Examples\Cuboid_HWSS.cgol</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\Examples\Cuboid_LWSS.cgol">
+      <Link>Examples\Cuboid_LWSS.cgol</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\Examples\Cuboid_MWSS.cgol">
+      <Link>Examples\Cuboid_MWSS.cgol</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\Examples\Rectangle_72P6H2V0.cgol">
+      <Link>Examples\Rectangle_72P6H2V0.cgol</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\Examples\Rectangle_GliderCannonGliderEater.cgol">
+      <Link>Examples\Rectangle_GliderCannonGliderEater.cgol</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\Examples\Rectangle_HWSS.cgol">
+      <Link>Examples\Rectangle_HWSS.cgol</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\Examples\Rectangle_LWSS.cgol">
+      <Link>Examples\Rectangle_LWSS.cgol</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\Examples\Rectangle_MWSS.cgol">
+      <Link>Examples\Rectangle_MWSS.cgol</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\Examples\Rectangle_r-Pentomino.cgol">
+      <Link>Examples\Rectangle_r-Pentomino.cgol</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>

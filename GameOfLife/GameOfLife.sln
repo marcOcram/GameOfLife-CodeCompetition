@@ -1,13 +1,32 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26730.15
+VisualStudioVersion = 15.0.26730.16
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GameOfLife", "GameOfLife\GameOfLife.csproj", "{263F6164-C1B0-4ACB-A4CF-4448A684AFDB}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameOfLifeConsole", "GameOfLifeConsole\GameOfLifeConsole.csproj", "{82B8D579-2D7B-4F01-8558-B76D0D464282}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameOfLifeWPF", "GameOfLifeWPF\GameOfLifeWPF.csproj", "{C5BC9B61-EDD2-4732-9003-D08F9D344B1C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{C7F42415-AAAD-4594-88E6-A3C1EDCF2A07}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\Cuboid_HWSS.cgol = Examples\Cuboid_HWSS.cgol
+		Examples\Cuboid_LWSS.cgol = Examples\Cuboid_LWSS.cgol
+		Examples\Cuboid_MWSS.cgol = Examples\Cuboid_MWSS.cgol
+		Examples\Rectangle_72P6H2V0.cgol = Examples\Rectangle_72P6H2V0.cgol
+		Examples\Rectangle_GliderCannonGliderEater.cgol = Examples\Rectangle_GliderCannonGliderEater.cgol
+		Examples\Rectangle_HWSS.cgol = Examples\Rectangle_HWSS.cgol
+		Examples\Rectangle_LWSS.cgol = Examples\Rectangle_LWSS.cgol
+		Examples\Rectangle_MWSS.cgol = Examples\Rectangle_MWSS.cgol
+		Examples\Rectangle_r-Pentomino.cgol = Examples\Rectangle_r-Pentomino.cgol
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{BA21D5D2-E7B9-4329-8BB2-3CA514DA61D5}"
+	ProjectSection(SolutionItems) = preProject
+		LICENSE = LICENSE
+		README.md = README.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -75,5 +94,11 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4D2163BF-8301-4F01-81C7-9ECFEC07078C}
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
 	EndGlobalSection
 EndGlobal

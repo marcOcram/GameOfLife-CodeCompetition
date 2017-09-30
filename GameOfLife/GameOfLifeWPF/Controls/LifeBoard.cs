@@ -1,79 +1,89 @@
 ﻿using GameOfLife;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Shapes;
+using System.Windows.Media.Imaging;
 
 namespace GameOfLifeWPF.Controls
 {
     /// <summary>
-    /// Follow steps 1a or 1b and then 2 to use this custom control in a XAML file.
-    ///
-    /// Step 1a) Using this custom control in a XAML file that exists in the current project.
-    /// Add this XmlNamespace attribute to the root element of the markup file where it is
-    /// to be used:
-    ///
-    ///     xmlns:MyNamespace="clr-namespace:GameOfLifeWPF.Controls"
-    ///
-    ///
-    /// Step 1b) Using this custom control in a XAML file that exists in a different project.
-    /// Add this XmlNamespace attribute to the root element of the markup file where it is
-    /// to be used:
-    ///
-    ///     xmlns:MyNamespace="clr-namespace:GameOfLifeWPF.Controls;assembly=GameOfLifeWPF.Controls"
-    ///
-    /// You will also need to add a project reference from the project where the XAML file lives
-    /// to this project and Rebuild to avoid compilation errors:
-    ///
-    ///     Right click on the target project in the Solution Explorer and
-    ///     "Add Reference"->"Projects"->[Browse to and select this project]
-    ///
-    ///
-    /// Step 2)
-    /// Go ahead and use your control in the XAML file.
-    ///
-    ///     <MyNamespace:LifeBoard/>
-    ///
+    /// A control to display <see cref="IField"/>s. It is used because the WPF visual tree is too slow for many elements (e. g. many <see cref="System.Windows.Shapes.Rectangle"/>s inside a <see cref="Canvas"/>).
+    /// <para>
+    /// It uses a <see cref="WriteableBitmap"/> to create an image on the fly and displaying it to the user. This is much more faster but can use a lot of memory because <see cref="WriteableBitmap"/> isn't disposed fast enough sometimes. This can lead to some kind of memory leaks.
+    /// </para>
     /// </summary>
+    /// <seealso cref="System.Windows.Controls.Control" />
     public class LifeBoard : Control
     {
         #region Public Fields
 
-        // Using a DependencyProperty as the backing store for brush.  This enables animation, styling, binding, etc...
-        public static readonly DependencyProperty AliveBrushProperty =
-            DependencyProperty.Register(nameof(AliveBrush), typeof(Brush), typeof(LifeBoard), new PropertyMetadata(new SolidColorBrush(Color.FromRgb(0, 255, 0))));
+        // Using a DependencyProperty as the backing store for AliveColor.  This enables animation, styling, binding, etc...
+        public static readonly DependencyProperty AliveColorProperty =
+            DependencyProperty.Register(nameof(AliveColor), typeof(Color), typeof(LifeBoard), new PropertyMetadata(Colors.GreenYellow, OnColorValueChanged));
 
-        // Using a DependencyProperty as the backing store for DeadBrush.  This enables animation, styling, binding, etc...
-        public static readonly DependencyProperty DeadBrushProperty =
-            DependencyProperty.Register(nameof(DeadBrush), typeof(Brush), typeof(LifeBoard), new PropertyMetadata(new SolidColorBrush(Color.FromRgb(255, 0, 0))));
+        // Using a DependencyProperty as the backing store for DeadColor.  This enables animation, styling, binding, etc...
+        public static readonly DependencyProperty DeadColorProperty =
+            DependencyProperty.Register(nameof(DeadColor), typeof(Color), typeof(LifeBoard), new PropertyMetadata(Colors.SlateGray, OnColorValueChanged));
 
         // Using a DependencyProperty as the backing store for FieldSize.  This enables animation, styling, binding, etc...
         public static readonly DependencyProperty FieldSizeProperty =
-            DependencyProperty.Register(nameof(FieldSize), typeof(int), typeof(LifeBoard), new PropertyMetadata(5));
+            DependencyProperty.Register(nameof(FieldSize), typeof(int), typeof(LifeBoard), new PropertyMetadata(25, OnValueChanged));
 
-        // Using a DependencyProperty as the backing store for LifeState.  This enables animation, styling, binding, etc...
-        public static readonly DependencyProperty LifeStatesProperty =
-            DependencyProperty.Register(nameof(LifeStates), typeof(LifeState[,]), typeof(LifeBoard), new PropertyMetadata(null, OnLifeStatesChanged));
+        // Using a DependencyProperty as the backing store for Fields.  This enables animation, styling, binding, etc...
+        public static readonly DependencyProperty FieldsProperty =
+            DependencyProperty.Register(nameof(Fields), typeof(IEnumerable<IField>), typeof(LifeBoard), new PropertyMetadata(null, OnValueChanged));
 
-        // Using a DependencyProperty as the backing store for NoLifeBrush.  This enables animation, styling, binding, etc...
-        public static readonly DependencyProperty NoLifeBrushProperty =
-            DependencyProperty.Register(nameof(NoLifeBrush), typeof(Brush), typeof(LifeBoard), new PropertyMetadata(new SolidColorBrush(Color.FromRgb(0, 0, 0))));
+        // Using a DependencyProperty as the backing store for HighlightStroke.  This enables animation, styling, binding, etc...
+        public static readonly DependencyProperty HighlightStrokeProperty =
+            DependencyProperty.Register(nameof(HighlightStroke), typeof(Color), typeof(LifeBoard), new PropertyMetadata(Colors.YellowGreen, OnColorValueChanged));
+
+        // Using a DependencyProperty as the backing store for Stroke.  This enables animation, styling, binding, etc...
+        public static readonly DependencyProperty StrokeProperty =
+            DependencyProperty.Register(nameof(Stroke), typeof(Color), typeof(LifeBoard), new PropertyMetadata(Colors.Black, OnColorValueChanged));
 
         #endregion Public Fields
 
         #region Private Fields
 
-        private Canvas _canvas;
+        /// <summary>
+        /// The thickness of the stroke of each rectangle.
+        /// </summary>
+        private const int _strokeThickness = 1;
 
-        private uint _columns;
+        /// <summary>
+        /// The fields which are given to the control.
+        /// </summary>
+        private IField[,] _fields;
 
-        private Rectangle[,] _fields;
+        /// <summary>
+        /// The image which is used to display the <see cref="_writeableBitmap"/>.
+        /// </summary>
+        private Image _image;
 
-        private uint _rows;
+        /// <summary>
+        /// The amount of columns of the life board.
+        /// </summary>
+        private int _nColumns;
+
+        /// <summary>
+        /// The amount of rows of the life board.
+        /// </summary>
+        private int _nRows;
+
+        /// <summary>
+        /// The old position which the mouse has hovered.
+        /// </summary>
+        private Point? _oldHoverPosition = null;
+
+        /// <summary>
+        /// The writeable bitmap to create the image of life board.
+        /// </summary>
+        private WriteableBitmap _writeableBitmap;
 
         #endregion Private Fields
 
@@ -88,141 +98,259 @@ namespace GameOfLifeWPF.Controls
 
         #region Public Properties
 
-        public Brush AliveBrush {
-            get { return (Brush)GetValue(AliveBrushProperty); }
-            set { SetValue(AliveBrushProperty, value); }
+        /// <summary>
+        /// Gets or sets the color of alive fields.
+        /// </summary>
+        /// <value>
+        /// The color of alive fields.
+        /// </value>
+        public Color AliveColor {
+            get { return (Color)GetValue(AliveColorProperty); }
+            set { SetValue(AliveColorProperty, value); }
         }
 
-        public Brush DeadBrush {
-            get { return (Brush)GetValue(DeadBrushProperty); }
-            set { SetValue(DeadBrushProperty, value); }
+        /// <summary>
+        /// Gets or sets the color of dead fields.
+        /// </summary>
+        /// <value>
+        /// The color of dead fields.
+        /// </value>
+        public Color DeadColor {
+            get { return (Color)GetValue(DeadColorProperty); }
+            set { SetValue(DeadColorProperty, value); }
         }
 
+        /// <summary>
+        /// Gets or sets the fields.
+        /// </summary>
+        /// <value>
+        /// The fields.
+        /// </value>
+        public IEnumerable<IField> Fields {
+            get { return (IEnumerable<IField>)GetValue(FieldsProperty); }
+            set { SetValue(FieldsProperty, value); }
+        }
+
+        /// <summary>
+        /// Gets or sets the size of each field.
+        /// </summary>
+        /// <value>
+        /// The size of each field.
+        /// </value>
         public int FieldSize {
             get { return (int)GetValue(FieldSizeProperty); }
             set { SetValue(FieldSizeProperty, value); }
         }
 
-        public LifeState[,] LifeStates {
-            get { return (LifeState[,])GetValue(LifeStatesProperty); }
-            set { SetValue(LifeStatesProperty, value); }
+        /// <summary>
+        /// Gets or sets the color of the highlight stroke.
+        /// </summary>
+        /// <value>
+        /// The color of the highlight stroke.
+        /// </value>
+        public Color HighlightStroke {
+            get { return (Color)GetValue(HighlightStrokeProperty); }
+            set { SetValue(HighlightStrokeProperty, value); }
         }
 
-        public Brush NoLifeBrush {
-            get { return (Brush)GetValue(NoLifeBrushProperty); }
-            set { SetValue(NoLifeBrushProperty, value); }
+        /// <summary>
+        /// Gets or sets the color of the stroke.
+        /// </summary>
+        /// <value>
+        /// The stroke.
+        /// </value>
+        public Color Stroke {
+            get { return (Color)GetValue(StrokeProperty); }
+            set { SetValue(StrokeProperty, value); }
         }
-
-
-
-        public double ZoomLevel {
-            get { return (double)GetValue(ZoomLevelProperty); }
-            set { SetValue(ZoomLevelProperty, value); }
-        }
-
-        // Using a DependencyProperty as the backing store for ZoomLevel.  This enables animation, styling, binding, etc...
-        public static readonly DependencyProperty ZoomLevelProperty =
-            DependencyProperty.Register(nameof(ZoomLevel), typeof(double), typeof(LifeBoard), new PropertyMetadata(1.0));
-
-
-
-        public uint Columns {
-            get { return (uint)GetValue(ColumnsProperty); }
-            set { SetValue(ColumnsProperty, value); }
-        }
-
-        // Using a DependencyProperty as the backing store for Columns.  This enables animation, styling, binding, etc...
-        public static readonly DependencyProperty ColumnsProperty =
-            DependencyProperty.Register(nameof(Columns), typeof(uint), typeof(LifeBoard), new PropertyMetadata(0));
-
-
-
-        public uint Rows {
-            get { return (uint)GetValue(RowsProperty); }
-            set { SetValue(RowsProperty, value); }
-        }
-
-        // Using a DependencyProperty as the backing store for Rows.  This enables animation, styling, binding, etc...
-        public static readonly DependencyProperty RowsProperty =
-            DependencyProperty.Register(nameof(Rows), typeof(uint), typeof(LifeBoard), new PropertyMetadata(0));
-
-
-
 
         #endregion Public Properties
 
         #region Public Methods
 
+        /// <summary>
+        /// Draws the hover effect for a field at the given mouse position.
+        /// </summary>
+        /// <param name="mousePosition">The mouse position.</param>
+        /// <param name="isMouseOver">if set to <c>true</c> the hover effect is drawn.</param>
+        public void DrawHoverEffect(Point mousePosition, bool isMouseOver)
+        {
+            Position lifeBoardPosition = CalculateLifeBoardPosition(mousePosition);
+            DrawField(lifeBoardPosition.X, lifeBoardPosition.Y, isMouseOver);
+        }
+
+        /// <summary>When overridden in a derived class, is invoked whenever application code or internal processes call <see cref="M:System.Windows.FrameworkElement.ApplyTemplate" />.</summary>
         public override void OnApplyTemplate()
         {
             base.OnApplyTemplate();
 
-            //_canvas = GetTemplateChild("_canvas") as Canvas;
-            
-            Update();
+            _image = (Image)Template.FindName("_image", this);
+
+            _image.MouseMove += (s, e) => {
+                if (_oldHoverPosition.HasValue) {
+                    DrawHoverEffect(_oldHoverPosition.Value, false);
+                }
+
+                _oldHoverPosition = e.GetPosition(_image);
+                DrawHoverEffect(_oldHoverPosition.Value, true);
+            };
+
+            _image.MouseLeave += (s, e) => {
+                if (_oldHoverPosition.HasValue) {
+                    DrawHoverEffect(_oldHoverPosition.Value, false);
+                }
+
+                _oldHoverPosition = null;
+            };
+
+            _image.MouseDown += (s, e) => {
+                Point position = e.GetPosition(_image);
+                int x = (int)position.X / FieldSize;
+                int y = (int)position.Y / FieldSize;
+
+                _fields[x, y].RequestLifeStateChangeCommand.Execute(null);
+            };
+
+            UpdateWholeBitmap();
         }
 
         #endregion Public Methods
 
         #region Private Methods
 
-        private static void OnLifeStatesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        private static void OnColorValueChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            (d as LifeBoard)?.Update();
+            if (e.NewValue != e.OldValue) {
+                (d as LifeBoard)?.RedrawFields();
+            }
         }
 
-        private void Update()
+        private static void OnValueChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            if (this.IsInitialized && LifeStates != null) {
+            if (e.NewValue != e.OldValue) {
+                (d as LifeBoard)?.UpdateWholeBitmap();
+            }
+        }
 
-                uint newColumns = (uint)LifeStates.GetLength(0);
-                uint newRows = (uint)LifeStates.GetLength(1);
+        /// <summary>
+        /// Calculates the position of a field which is hovered by the mouse.
+        /// </summary>
+        /// <param name="mousePosition">The mouse position.</param>
+        /// <returns></returns>
+        private Position CalculateLifeBoardPosition(Point mousePosition)
+        {
+            return new Position(Math.Min((int)mousePosition.X / FieldSize, _nColumns - 1), Math.Min((int)mousePosition.Y / FieldSize, _nRows - 1));
+        }
 
-                if (newColumns != _columns || newRows != _rows) {
-                    Columns = newColumns;
-                    Rows = newRows;
+        /// <summary>
+        /// Draws a field at the given position.
+        /// </summary>
+        /// <param name="x">The x-coordinate.</param>
+        /// <param name="y">The y-coordinate.</param>
+        /// <param name="isMouseOver">if set to <c>true</c> the hover effect is drawn.</param>
+        private void DrawField(int x, int y, bool isMouseOver)
+        {
+            IField field = _fields[x, y];
+            DrawField(field, isMouseOver);
+        }
 
-                    //_canvas.Width = newColumns * FieldSize;
-                    //_canvas.Height = newRows * FieldSize;
-                    //_fields = new Rectangle[_columns, _rows];
+        /// <summary>
+        /// Draws the given field.
+        /// </summary>
+        /// <param name="field">The field.</param>
+        /// <param name="isMouseOver">if set to <c>true</c> the hover effect is drawn.</param>
+        private void DrawField(IField field, bool isMouseOver)
+        {
+            if (field.IsAlive.HasValue) {
+                Dispatcher.Invoke(new Action(() => {
+                    int x1 = field.X * FieldSize;
+                    int y1 = field.Y * FieldSize;
 
-                    //_canvas.Children.Clear();
-                    //for (int y = 0; y < _rows; ++y) {
-                    //    for (int x = 0; x < _columns; ++x) {
-                    //        _fields[x, y] = new Rectangle()
-                    //        {
-                    //            //Style = FindResource("Field") as Style
-                    //            //Height = FieldSize,
-                    //            //Stroke = new SolidColorBrush(Color.FromRgb(100, 100, 100)),
-                    //            //StrokeThickness = FieldSize / 10.0,
-                    //            //Width = FieldSize
-                    //        };
+                    int x2 = (field.X + 1) * FieldSize;
+                    int y2 = (field.Y + 1) * FieldSize;
 
-                    //        Canvas.SetLeft(_fields[x, y], x * FieldSize);
-                    //        Canvas.SetTop(_fields[x, y], y * FieldSize);
+                    Color strokeColor = isMouseOver ? HighlightStroke : Stroke;
+                    Color fillColor = field.IsAlive.Value ? AliveColor : DeadColor;
 
-                    //        _canvas.Children.Add(_fields[x, y]);
-                    //    }
-                    //}
+                    _writeableBitmap.FillRectangle(x1, y1, x2, y2, strokeColor);
+                    _writeableBitmap.FillRectangle(x1 + _strokeThickness, y1 + _strokeThickness, x2 - _strokeThickness, y2 - _strokeThickness, fillColor);
+                }));
+            }
+        }
+
+        /// <summary>
+        /// Draws the whole life board.
+        /// </summary>
+        private void DrawWholeLifeBoard()
+        {
+            int pixelWidth = _nColumns * FieldSize;
+            int pixelHeight = _nRows * FieldSize;
+
+            DpiScale dpiScale = VisualTreeHelper.GetDpi(this);
+
+            if (_writeableBitmap != null) {
+                _writeableBitmap.Freeze(); // for disposing the old bitmap
+                _image.Source = null;
+            }
+
+            _writeableBitmap = BitmapFactory.New(pixelWidth, pixelHeight);
+            _image.Source = _writeableBitmap;
+
+            RedrawFields();
+        }
+
+        private void OnFieldPropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(IField.IsAlive) && sender is IField field) {
+                DrawField(field, false);
+            }
+        }
+
+        /// <summary>
+        /// Redraws all fields.
+        /// </summary>
+        private void RedrawFields()
+        {
+            for (int y = 0; y < _nRows; ++y) {
+                for (int x = 0; x < _nColumns; ++x) {
+                    DrawField(x, y, false);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Updates the whole bitmap by redrawing everything.
+        /// </summary>
+        private void UpdateWholeBitmap()
+        {
+            if (_image == null) {
+                return;
+            }
+
+            if (_fields != null) {
+                foreach (IField field in _fields) {
+                    if (field is INotifyPropertyChanged notifyingField) {
+                        notifyingField.PropertyChanged -= OnFieldPropertyChanged;
+                    }
+                }
+            }
+
+            if (Fields != null) {
+                // Remark: Could be slow
+                _nColumns = Fields.Max(f => f.X) + 1;
+                _nRows = Fields.Max(f => f.Y) + 1;
+
+                _fields = new IField[_nColumns, _nRows];
+
+                foreach (IField field in Fields) {
+                    _fields[field.X, field.Y] = field;
+
+                    if (field is INotifyPropertyChanged notifyingField) {
+                        notifyingField.PropertyChanged += OnFieldPropertyChanged;
+                    }
                 }
 
-                //for (int y = 0; y < _rows; ++y) {
-                //    for (int x = 0; x < _columns; ++x) {
-                //        switch (LifeStates[x, y]) {
-                //            case LifeState.NoLifePossible:
-                //                //_fields[x, y].Fill = NoLifeBrush;
-                //                break;
-
-                //            case LifeState.Dead:
-                //                //_fields[x, y].Fill = DeadBrush;
-                //                break;
-
-                //            case LifeState.Alive:
-                //                //_fields[x, y].Fill = AliveBrush;
-                //                break;
-                //        }
-                //    }
-                //}
+                DrawWholeLifeBoard();
             }
         }
 

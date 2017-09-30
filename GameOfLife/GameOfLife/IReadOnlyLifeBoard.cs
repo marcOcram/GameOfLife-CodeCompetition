@@ -4,6 +4,9 @@ using System.Text;
 
 namespace GameOfLife
 {
+    /// <summary>
+    /// Read-only access to a life board.
+    /// </summary>
     public interface IReadOnlyLifeBoard
     {
         #region Public Properties
@@ -14,7 +17,7 @@ namespace GameOfLife
         /// <value>
         /// The total height.
         /// </value>
-        uint Height { get; }
+        int Height { get; }
 
         /// <summary>
         /// Gets the width of the board.
@@ -22,7 +25,7 @@ namespace GameOfLife
         /// <value>
         /// The total width.
         /// </value>
-        uint Width { get; }
+        int Width { get; }
 
         #endregion Public Properties
 
@@ -47,7 +50,7 @@ namespace GameOfLife
         /// <param name="x">The x-coordinate.</param>
         /// <param name="y">The y-coordinate.</param>
         /// <returns></returns>
-        LifeState this[uint x, uint y] { get; }
+        LifeState this[int x, int y] { get; }
 
         #endregion Public Indexers
 
@@ -59,7 +62,7 @@ namespace GameOfLife
         /// <param name="x">The x-coordinate.</param>
         /// <param name="y">The y-coordinate.</param>
         /// <returns></returns>
-        LifeState GetLifeState(uint x, uint y);
+        LifeState GetLifeState(int x, int y);
 
         /// <summary>
         /// Gets the <see cref="LifeState"/> of the specified position.

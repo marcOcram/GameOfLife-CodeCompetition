@@ -5,12 +5,20 @@ using System.Text;
 
 namespace GameOfLife
 {
+    /// <summary>
+    /// Contains a position on a life board
+    /// </summary>
     [DebuggerDisplay("({X}, {Y})")]
     public struct Position
     {
         #region Public Constructors
 
-        public Position(uint x, uint y)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Position"/> struct.
+        /// </summary>
+        /// <param name="x">The x.</param>
+        /// <param name="y">The y.</param>
+        public Position(int x, int y)
         {
             Y = y;
             X = x;
@@ -20,23 +28,25 @@ namespace GameOfLife
 
         #region Public Properties
 
-        public uint X { get; }
+        /// <summary>
+        /// Gets the x-coordinate.
+        /// </summary>
+        /// <value>
+        /// The x.
+        /// </value>
+        public int X { get; }
 
-        public uint Y { get; }
+        /// <summary>
+        /// Gets the y-coordinate.
+        /// </summary>
+        /// <value>
+        /// The y.
+        /// </value>
+        public int Y { get; }
 
         #endregion Public Properties
 
         #region Public Methods
-
-        public static bool operator !=(Position p1, Position p2)
-        {
-            return !p1.Equals(p2);
-        }
-
-        public static bool operator ==(Position p1, Position p2)
-        {
-            return p1.Equals(p2);
-        }
 
         public override string ToString()
         {
