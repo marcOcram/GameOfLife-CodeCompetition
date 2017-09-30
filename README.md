@@ -15,6 +15,7 @@ In order to run the Game of Life on the console start up the *GameOfLifeConsole.
 The console version supports the following parameters:
 
 | Parameter	| Value |
+| ---------	| ----- |
 | -b		| "Toroid" or "Cuboid" (Default: "Toroid") |
 | -w 		| The width of the toroid or cuboid (Default: 10) |
 | -h 		| The height of the torid or cuboid (Default: 10) |
